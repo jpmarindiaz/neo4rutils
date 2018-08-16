@@ -15,6 +15,15 @@ drop_constraint <- function(label, property, con){
   !property %in% con$get_constraints()$property_keys
 }
 
+drop_all_constraints <- function(con){
+  constraints <- con$get_constraints()
+  if(nrow(constraints) == 0) return()
+  constraints <- constraints%>%
+    select(label, property_keys) %>%
+    transpose()
+  all(map(constraints, ~drop_constraint(.$label, .$property_keys, con)))
+}
+
 create_constraint <- function(label, property, con){
   q <- "CREATE CONSTRAINT ON (a:{label}) ASSERT a.{property} IS UNIQUE;"
   q <- str_tpl_format(q,list(label = label, property = property))

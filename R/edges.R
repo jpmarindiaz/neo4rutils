@@ -1,81 +1,99 @@
 
-create_edges <- function(edges, rel_type = NULL,
-                         src_col = NULL, src_label = NULL, src_uid_prop = NULL,
-                         tgt_col = NULL, tgt_label = NULL, tgt_uid_prop = NULL,
-                         rel_type_col = NULL,
-                         con = con, show_query = FALSE){
-  # edges <- list(list(from = 1, to = "la-estrategia", myreltype = "RELATED"),list(from = 2, to = "la-estrategia", anotherrel = "another1",x=2, myreltype = "RELTYPE2"))
-  edges2 <- map(seq_along(edges),function(i){
-    ed <- edges[[i]]
-    src_uid <- ed[[src_col]]
-    src_uid <- add_quotes(src_uid)
-    tgt_uid <- ed[[tgt_col]]
-    tgt_uid <- add_quotes(tgt_uid)
-    idx <- i
-    if(is.null(rel_type)){
-      props <- ed %>% keep(!names(ed) %in% c(src_col, tgt_col,rel_type_col))
-      rel_type_value <- ed[[rel_type_col]]
-    }else{
-      props <- ed %>% keep(!names(ed) %in% c(src_col, tgt_col))
-      rel_type_value <- rel_type
-    }
-    list(src_uid_prop = src_uid_prop, src_uid = src_uid, src_label = src_label,
-         tgt_uid_prop = tgt_uid_prop, tgt_uid = tgt_uid, tgt_label = tgt_label,
-         idx = idx, REL_TYPE = rel_type_value, props = props)
-  })
-  if(src_uid_prop == ".id" || tgt_uid_prop == ".id"){
-    tpl <- "ID(n{idx}) = {src_uid} AND ID(m{idx}) = {tgt_uid}"
-    qmatch <- str_tpl_format_map(edges2,"ID(n{idx}) = {src_uid} AND ID(m{idx}) = {tgt_uid}")
-    qmatchn <- paste0(str_tpl_format_map(edges2,"(n{idx}),(m{idx})"), collapse = ",")
-    qmatch <- paste0("MATCH ", qmatchn, " WHERE ", paste0(qmatch, collapse = " AND "))
-  }else{
-    if(is.null(src_label) || is.null(tgt_label)){
-      qmatch <- "(n{idx}{{src_uid_prop}:{src_uid}}),(m{idx}{{tgt_uid_prop}:{tgt_uid}})"
-    }else{
-      qmatch <- "(n{idx}:{src_label}{{src_uid_prop}:{src_uid}}),(m{idx}:{tgt_label}{{tgt_uid_prop}:{tgt_uid}})"
-    }
-    qmatch <- str_tpl_format_map(edges2, qmatch)
-    qmatch <- paste0("MATCH ",paste0(qmatch, collapse = ", "))
-  }
-  qmerge <- map(seq_along(edges2), function(i){
-    ed <- edges2[[i]]
-    if(length(ed$props) > 0){
-      q <- "MERGE (n{idx})-[e{idx}:{REL_TYPE}{{props}}]-(m{idx})"
-    }else{
-      q <- "MERGE (n{idx})-[e{idx}:{REL_TYPE}]-(m{idx})"
-    }
-    props <- write_props_cypher(ed$props)
-    str_tpl_format(q, list(REL_TYPE = add_quotes(ed$REL_TYPE,""), props = props, idx = i))
-  })
-  qmerge <- paste0(qmerge, collapse = "\n")
-  q <- paste(qmatch, qmerge, sep = "\n")
-  ret <- paste0(paste("e",1:length(edges),sep = ""),collapse=",")
-  q <- paste0(paste0(q, collapse = "\n"), paste("\nRETURN ",ret))
+create_edge <- function(src_id, tgt_id, rel_type, props, show_query = FALSE){
+  src_id <- 204
+  tgt_id <- 205
+  rel_type <- "RELATION"
+  props <- list(x = 23, txt = "weeeee")
+  #ed <- list(from = 1, to = "la-estrategia", myreltype = "RELATED")
+  props <- write_props_cypher(props)
+  qtpl <- "MATCH (n1), (n2)
+  WHERE ID(n1) = {src_id} AND ID(n2) = {tgt_id}
+  CREATE (n1)-[r:{rel_type}{{props}}]->(n2)
+  RETURN n1,r,n2"
+  vals <- list(src_id = src_id, tgt_id = tgt_id, rel_type = rel_type, props = props)
+  q <- str_tpl_format(qtpl,vals)
   if(show_query) message(q)
   call_api(q, con)
 }
 
 
-#' @export
-get_edges_table <- function(con, rel_type = NULL){
-  q <- "MATCH ()-[r]->() RETURN r"
-  edges <- call_api(q, con)
+load_edges_csv <- function(csv_url,
+                           src_col = src_col,
+                           src_label = src_label,
+                           src_uid_prop = src_uid_prop,
+                           tgt_col = tgt_col,
+                           tgt_label = tgt_label,
+                           tgt_uid_prop = tgt_uid_prop,
+                           rel_type = NULL,
+                           con = con,
+                           show_query = TRUE){
 
-  r <- cypherToList(graph, q)
-  start <- map_chr(r, ~ basename(attr(.$r,"start")))
-  end <-  map_chr(r, ~ basename(attr(.$r,"end")))
-  type <-  map_chr(r, ~ basename(attr(.$r,"type")))
-  relId <-  map_chr(r, ~ basename(attr(.$r,"self")))
-  edgesTable <- data_frame(.relId = relId, type = type, from = start, to = end)
-  labels <- getLabel(graph)
-  nodesTables <- get_nodes_table(graph)
-  nodesTablesIds <- nodesTables[c(".id","label")]
-  edgesTable$fromLabel <- match_replace(edgesTable$from,nodesTablesIds)
-  edgesTable$toLabel <- match_replace(edgesTable$to,nodesTablesIds)
-  edgesTable
+  #csv_url <- "https://raw.githubusercontent.com/jpmarindiaz/RNeo4jUtils/master/inst/data/roles.csv"
+  d <- read_csv(csv_url, n_max = 5)
+
+  # src_col <- "personId"
+  # tgt_col <- "movieId"
+  # src_uid_prop <- "id"
+  # tgt_uid_prop <- "id"
+  # src_label <- "Person"
+  # tgt_label <- "Movie"
+  # rel_type <- "ROLESSSSSS"
+  # rel_props_cols <- c("role","personId")
+
+  props <- paste0("csvLine.",rel_props_cols)
+  names(props) <- rel_props_cols
+  props <- write_props_cypher(as.list(props), quote = FALSE)
+  qtpl <- '
+  MERGE (n1:{src_label}{{src_uid_prop}:csvLine.{src_col}})
+  MERGE (n2:{tgt_label}{{tgt_uid_prop}:csvLine.{tgt_col}})
+  MERGE(n1)-[r:TESTtttt{{props}}]-(n2)
+  RETURN n1,r,n2'
+  vals <- list(src_id = src_id, src_label = src_label,
+               src_col = src_col, src_uid_prop = src_uid_prop,
+               tgt_id = tgt_id, tgt_label = tgt_label,
+               tgt_col = tgt_col, tgt_uid_prop = tgt_uid_prop,
+               rel_type = rel_type, rel_type_col = rel_type_col,
+               props = props)
+  on_load_query <- str_tpl_format(qtpl, vals)
+  if(show_query) message(on_load_query)
+  load_csv(url = csv_url,
+           con = con, header = TRUE, periodic_commit = 50,
+           as = "csvLine", on_load = on_load_query)
+
+  # USING PERIODIC COMMIT 50 LOAD CSV WITH HEADERS FROM 'https://raw.githubusercontent.com/jpmarindiaz/RNeo4jUtils/master/inst/data/roles.csv' AS csvLine
+  # MERGE (n1:Person{id:csvLine.personId})
+  # MERGE (n2:Movie{id:csvLine.movieId})
+  # MERGE (n1)-[r:TEST2333]->(n2)
+
 }
 
 
+
+
+#' @export
+get_edges_table <- function(rel_type = NULL, con = NULL){
+  if(is.null(rel_type)){
+    rel_types <- con$get_relationships() %>% pull(1)
+    edges <- map(rel_types, ~get_edges_rel_type_table(.,con)) %>%
+      bind_rows()
+  }else{
+    edges <- get_edges_rel_type_table(rel_type, con)
+  }
+  edges
+}
+
+
+get_edges_rel_type_table <- function(rel_type, con){
+  q <- glue("MATCH (n1)-[r:{rel_type}]->(n2) RETURN n1,r,n2")
+  glue(q)
+  res <- call_api(q, con, meta = TRUE)
+  edges <- res$r %>% select(rel_id = id, everything(), -type, -deleted)
+  n1 <- res$n1 %>% select(src_id = id)
+  n2 <- res$n2 %>% select(tgt_id = id)
+  edges <- bind_cols(n1,edges,n2) %>%
+    mutate(rel_type = rel_type) %>%
+    select(rel_type, rel_id, src_id, tgt_id, everything())
+}
 
 
 

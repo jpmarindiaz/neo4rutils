@@ -19,6 +19,7 @@ test_that("test",{
                        user = "neo4j", password = "neo4jpwd")
   clear_db(con)
   expect_true(con$ping() == 200)
+  drop_all_constraints(con)
 
   new_nodes <- list(list(nam = "x", id = "newnode"))
   #new_nodes <- list(nam = "x", idx = 3)
@@ -41,8 +42,6 @@ test_that("test",{
   expect_equal(get_node_count("Movie", con = con), 4)
   get_node_count_by_label(con = con)
 
-  # TODO get node count with out label
-
   expect_equal(get_node_count(con = con),5)
   expect_equal(get_edge_count(con = con),0)
 
@@ -51,6 +50,7 @@ test_that("test",{
 
   all_nodes <- get_nodes_table(con = con)
   movies <- get_nodes_table(label = "Movie", con = con)
+  # TODO get nodes label for nodes without label
 
   movies_url <- read_csv(csv_url, col_types = cols(.default = "c"))
   movies2 <- movies[names(movies_url)]
@@ -74,7 +74,7 @@ test_that("test",{
   people <- read_csv(system.file("data/persons.csv",package = "neo4rutils"))
   load_nodes_df(people,"Person",con)
   get_node_count("Person",con)
-
+  expect_equal(get_label_node_count("Person",con),6)
 
   expect_error(get_nodes_table(label = "NonExistent",con),"label not in Labels")
 
@@ -89,7 +89,8 @@ test_that("test",{
   n <- get_node_by_id(random_id, con = con)
   expect_true(n$.id == random_id)
 
-  expect_error(get_node_by_uid(uid = "p1" , prop = "id", label = "Person", con = con))
+  expect_error(get_node_by_uid(uid = "p1" , prop = "id", label = "Person", con = con),
+               "id needs to be a unique constraint")
   get_constraints(con)
   create_constraint(label = "Person", "id", con)
   n <- get_node_by_uid(uid = "p1", prop = "id", label = "Person", con = con)
@@ -99,6 +100,15 @@ test_that("test",{
   # Get node by uid with no label
   n <- get_node_by_uid(uid = "1", prop = "id", con = con)
   expect_true(n$id, "1")
+
+
+  # Add tests to edges loading
+  ed_csv_url <- "https://raw.githubusercontent.com/jpmarindiaz/RNeo4jUtils/master/inst/data/roles.csv"
+
+  edges1 <- get_edges_rel_type_table("TEST", con)
+  edges <- get_edges_table(con = con)
+
+  # Add node properties (e.g. uid) to edges table?
 
   edges <- read_csv(system.file("data/roles.csv",package = "neo4rutils"))
   edges <- edges %>% select(roleX = role, everything())
@@ -112,9 +122,6 @@ test_that("test",{
   tgt_label <- "Movie"
   rel_type <- "ROLESSSSSS"
   rel_type_col <- "role"
-
-
-
 
   tmp <-create_edges(edges,
                      rel_type = NULL,
