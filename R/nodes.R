@@ -1,3 +1,4 @@
+#' @export
 create_nodes <- function(nodes, label = NULL, con = con, show_query = FALSE){
   #nodes <- list(list(Name = "jp", age = 32), list(Name = "Ey",age = 23))
   #nodes <- list(id = "New movie", country = "COL", vals = c("val1", "val2"))
@@ -18,6 +19,7 @@ create_nodes <- function(nodes, label = NULL, con = con, show_query = FALSE){
   call_api(q, con)
 }
 
+#' @export
 load_nodes_csv <- function(csv_url, label, con, show_query = FALSE){
   #csv_url <- "https://raw.githubusercontent.com/jpmarindiaz/RNeo4jUtils/master/inst/data/movies.csv"
   d <- read_csv(csv_url, n_max = 5)

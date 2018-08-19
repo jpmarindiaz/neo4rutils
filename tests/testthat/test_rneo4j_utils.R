@@ -3,12 +3,6 @@ context("test")
 test_that("test",{
 
   # MAKE SURE NEO4J IS UP: neo4j start
-  # dburl <- "http://localhost:7474/db/data/"
-  # username <- "neo4j"
-  # password <- "neo4jpwd"
-
-
-  library(neo4r)
 
   #dotenv::load_dot_env(".env")
   #neo4j <- as.list(Sys.getenv(c("NEO4J_URL","NEO4J_USR","NEO4J_PWD")))
@@ -93,26 +87,36 @@ test_that("test",{
                "id needs to be a unique constraint")
   get_constraints(con)
   create_constraint(label = "Person", "id", con)
-  n <- get_node_by_uid(uid = "p1", prop = "id", label = "Person", con = con)
-  expect_equal(n$id, "p1")
+
+  get_node_count_by_label(con)
+
+  n <- get_node_by_uid(uid = 1, prop = "id", label = "Person", con = con)
+  expect_equal(n$id, 1)
   n <- get_node_by_uid(uid = "la-estrategia", prop = "id", label = "Movie", con = con)
   expect_equal(n$title, "La estrategia del caracol")
   # Get node by uid with no label
   n <- get_node_by_uid(uid = "1", prop = "id", con = con)
-  expect_true(n$id, "1")
+  expect_equal(n$id, "1")
 
+  # TEST LOAD EDGES
+  csv_url <- system.file("data/roles.csv",package = "neo4rutils")
+  d <- read_csv(csv_url)
+  nodes <- get_nodes_table(con = con)
 
-  # Add tests to edges loading
-  ed_csv_url <- "https://raw.githubusercontent.com/jpmarindiaz/RNeo4jUtils/master/inst/data/roles.csv"
+  src_col <- "personId"
+  tgt_col <- "movieId"
+  rel_type <- "MYREL"
+  src_uid_prop <- "id"
+  tgt_uid_prop <- "id"
+  src_label <- NULL
+  tgt_label <- NULL
+  rel_props <- NULL
 
-  edges1 <- get_edges_rel_type_table("TEST", con)
-  edges <- get_edges_table(con = con)
-
-  # Add node properties (e.g. uid) to edges table?
-
-  edges <- read_csv(system.file("data/roles.csv",package = "neo4rutils"))
-  edges <- edges %>% select(roleX = role, everything())
-  edges <- as.list(edges) %>% transpose()
+  prep_edges_load_query(d = d, rel_type = rel_type, src_col = src_col,
+                        src_label = src_label, src_uid_prop = src_uid_prop,
+                        tgt_col = tgt_col, tgt_label = tgt_label,
+                        tgt_uid_prop = tgt_uid_prop, rel_props = rel_props,
+                        con = con, show_query = show_query)
 
   src_col <- "personId"
   tgt_col <- "movieId"
@@ -120,38 +124,61 @@ test_that("test",{
   tgt_uid_prop <- "id"
   src_label <- "Person"
   tgt_label <- "Movie"
-  rel_type <- "ROLESSSSSS"
-  rel_type_col <- "role"
+  rel_type <- "TEST1"
+  rel_props <- c("prop2","prop1")
+  prep_edges_load_query(d = d, rel_type = rel_type, src_col = src_col,
+                        src_label = src_label, src_uid_prop = src_uid_prop,
+                        tgt_col = tgt_col, tgt_label = tgt_label,
+                        tgt_uid_prop = tgt_uid_prop, rel_props = rel_props,
+                        con = con, show_query = show_query)
 
-  tmp <-create_edges(edges,
-                     rel_type = NULL,
-                     src_col = src_col,
-                     src_label = src_label,
-                     src_uid_prop = src_uid_prop,
-                     tgt_col = tgt_col,
-                     tgt_label = tgt_label,
-                     tgt_uid_prop = tgt_uid_prop,
-                     rel_type_col = rel_type_col,
-                     con = con,
-                     show_query = TRUE)
+  csv_url <- "https://raw.githubusercontent.com/jpmarindiaz/neo4rutils/master/inst/data/roles.csv"
+  load_edges_csv(csv_url = csv_url,
+                 rel_type = rel_type,
+                 src_col = src_col,
+                 src_label = src_label,
+                 src_uid_prop = src_uid_prop,
+                 tgt_col = tgt_col,
+                 tgt_label = tgt_label,
+                 tgt_uid_prop = tgt_uid_prop,
+                 rel_props = rel_props,
+                 con = con,
+                 show_query = TRUE)
 
-  cat(tmp)
+  edges1 <- get_edges_rel_type_table("TEST1", con)
+  expect_equal(nrow(d), nrow(edges1))
+
+  load_edges_csv(csv_url = csv_url,
+                 rel_type = "TEST2",
+                 src_col = src_col,
+                 src_label = src_label,
+                 src_uid_prop = src_uid_prop,
+                 tgt_col = tgt_col,
+                 tgt_label = NULL,
+                 tgt_uid_prop = tgt_uid_prop,
+                 rel_props = NULL,
+                 con = con,
+                 show_query = TRUE)
+  edges2 <- get_edges_rel_type_table("TEST2", con)
+  edges <- get_edges_table(con = con)
+  expect_equal(nrow(edges), nrow(edges1) + nrow(edges2))
 
 
-  ### TODO FIX rel_type
-  tmp <-create_edges(edges,
-                     rel_type = rel_type,
-                     src_col = src_col,
-                     src_label = src_label,
-                     src_uid_prop = src_uid_prop,
-                     tgt_col = tgt_col,
-                     tgt_label = tgt_label,
-                     tgt_uid_prop = tgt_uid_prop,
-                     rel_type_col = rel_type_col,
-                     con = con,
-                     show_query = TRUE)
 
-  cat(tmp)
+  # ### TODO FIX rel_type
+  # tmp <-create_edges(edges,
+  #                    rel_type = rel_type,
+  #                    src_col = src_col,
+  #                    src_label = src_label,
+  #                    src_uid_prop = src_uid_prop,
+  #                    tgt_col = tgt_col,
+  #                    tgt_label = tgt_label,
+  #                    tgt_uid_prop = tgt_uid_prop,
+  #                    rel_type_col = rel_type_col,
+  #                    con = con,
+  #                    show_query = TRUE)
+  #
+  # cat(tmp)
 
 
 
