@@ -100,16 +100,18 @@ get_edges_table <- function(rel_type = NULL, con = NULL){
   edges
 }
 
-
-get_edges_rel_type_table <- function(rel_type, con){
+#' @export
+get_edges_rel_type_table <- function(rel_type, con, src_cols = NULL, tgt_cols = NULL){
+  if(!rel_type %in% get_available_rel_types(con))
+    stop("Rel type not in db")
   q <- glue("MATCH (n1)-[r:{rel_type}]->(n2) RETURN n1,r,n2")
   res <- call_api(q, con, meta = TRUE)
   edges <- res$r %>% select(.rel_id = id, everything(), -type, -deleted)
-  n1 <- res$n1 %>% select(src_uid = id)
-  n2 <- res$n2 %>% select(tgt_uid = id)
+  n1 <- res$n1 %>% select(.src_id = id, one_of(src_cols))
+  n2 <- res$n2 %>% select(.tgt_id = id, one_of(tgt_cols))
   edges <- bind_cols(n1,edges,n2) %>%
     mutate(rel_type = rel_type) %>%
-    select(rel_type, .rel_id, src_uid, tgt_uid, everything())
+    select(rel_type, .rel_id, .src_id, .tgt_id, everything())
 }
 
 
@@ -171,5 +173,12 @@ get_edge_count <- function(relType= NULL, con = con){
     RETURN COUNT(r)"
   }
   unname(unlist(call_api(q, con)))
+}
+
+#' @export
+get_available_rel_types <- function(con){
+  q <- "MATCH (n)-[r]-(m) RETURN DISTINCT type(r) AS type"
+  res <- call_api(q, con)
+  res$type %>% pull(1)
 }
 
