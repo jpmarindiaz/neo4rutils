@@ -1,8 +1,8 @@
-personId,movieId,role
-p1,1,Bud Fox
-p4,1,Carl Fox
-p3,1,Gordon Gekko
-p4,2,A.J. MacInerney
-p3,2,President Andrew Shepherd
-p5,3,Ellis Boyd 'Red' Redding
-p6,la-estrategia,El abogado
+personId,movieId,role, prop1,prop2
+p1,1,Bud Fox,as,AT
+p4,1,Carl Fox,re,EM
+p3,1,Gordon Gekko,we,RE
+p4,2,A.J. MacInerney,to,RM
+p3,2,President Andrew Shepherd,de,WM
+p5,3,Ellis Boyd 'Red' Redding,sa,BO
+p6,la-estrategia,El abogado,es,CA
