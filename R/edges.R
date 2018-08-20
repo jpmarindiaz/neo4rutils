@@ -59,7 +59,9 @@ prep_edges_load_query <- function(d = NULL,
                                   con = NULL,
                                   show_query = TRUE){
   calc_rel_props <- names(d)[!names(d) %in% c(src_label, tgt_label,rel_type,src_col,tgt_col)]
-  rel_props <- ifelse(is.null(rel_props),calc_rel_props,rel_props)
+  if(is.null(rel_props)){
+    rel_props <- calc_rel_props
+  }
   if(!rel_props %in% names(d)) stop("Rel prop columns not found in csv")
   rel_type <- ifelse(is.null(rel_type),"",paste0(":",rel_type))
   src_label <- ifelse(is.null(src_label),"",paste0(":",src_label))
