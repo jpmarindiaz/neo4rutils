@@ -71,6 +71,7 @@ prep_edges_load_query <- function(d = NULL,
   props <- paste0("csvLine.",rel_props)
   names(props) <- rel_props
   props <- write_props_cypher(as.list(props), quote = FALSE)
+  ### THIS QUERY DOES NOT CREATE NEW NODES FROM RELATIONSHIPS
   qtpl <- '
   MATCH (n1{src_label}{{src_uid_prop}:csvLine.{src_col}})
   MATCH (n2{tgt_label}{{tgt_uid_prop}:csvLine.{tgt_col}})
