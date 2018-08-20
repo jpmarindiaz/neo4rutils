@@ -28,7 +28,9 @@ load_edges_csv <- function(csv_url = NULL,
                            tgt_uid_prop = NULL,
                            rel_props = NULL,
                            con = NULL,
-                           show_query = TRUE){
+                           show_query = TRUE,
+                           periodic_commit = 20
+                           ){
   d <- read_csv(csv_url, n_max = 5, col_types = cols(.default = "c"))
   on_load_query <- prep_edges_load_query(d = d,
                                          rel_type = rel_type,
@@ -43,7 +45,7 @@ load_edges_csv <- function(csv_url = NULL,
                                          show_query = show_query)
   if(show_query) message(on_load_query)
   load_csv(url = csv_url,
-           con = con, header = TRUE, periodic_commit = 1000,
+           con = con, header = TRUE, periodic_commit = periodic_commit,
            as = "csvLine", on_load = on_load_query)
 }
 
