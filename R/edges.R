@@ -72,9 +72,9 @@ prep_edges_load_query <- function(d = NULL,
   names(props) <- rel_props
   props <- write_props_cypher(as.list(props), quote = FALSE)
   qtpl <- '
-  MERGE (n1{src_label}{{src_uid_prop}:csvLine.{src_col}})
-  MERGE (n2{tgt_label}{{tgt_uid_prop}:csvLine.{tgt_col}})
-  MERGE(n1)-[r{rel_type}{{props}}]-(n2)
+  MATCH (n1{src_label}{{src_uid_prop}:csvLine.{src_col}})
+  MATCH (n2{tgt_label}{{tgt_uid_prop}:csvLine.{tgt_col}})
+  CREATE UNIQUE (n1)-[r{rel_type}{{props}}]-(n2)
   RETURN n1,r,n2'
   vals <- list(src_label = src_label,
                src_col = src_col, src_uid_prop = src_uid_prop,
