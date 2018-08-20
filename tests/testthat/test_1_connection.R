@@ -1,4 +1,4 @@
-context("test")
+context("DB Connection")
 
 test_that("connection",{
 

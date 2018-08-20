@@ -29,7 +29,7 @@ load_edges_csv <- function(csv_url = NULL,
                            rel_props = NULL,
                            con = NULL,
                            show_query = TRUE){
-  d <- read_csv(csv_url)
+  d <- read_csv(csv_url, n_max = 5, col_types = cols(.default = "c"))
   on_load_query <- prep_edges_load_query(d = d,
                                          rel_type = rel_type,
                                          src_col = src_col,
@@ -169,13 +169,13 @@ load_edges_data_frame <- function(edges,
 
 #' @export
 get_edge_count <- function(rel_type= NULL, con = con){
-  if(!is.null(rel_type)){
-    q <- "MATCH (n)-[r:`{rel_type}`]->(m)
-    RETURN COUNT(r)"
+  if(is.null(rel_type)){
+    q <- "MATCH (n)-[r]->()\nRETURN COUNT(r)"
+  }else if(is.na(rel_type)){
+    q <- "MATCH (n) \nWHERE size(labels(n)) = 0\nRETURN COUNT(n)"
+  }else {
+    q <- "MATCH (n)-[r:`{rel_type}`]->()\nRETURN COUNT(r)"
     q <- str_tpl_format(q,list(rel_type = rel_type))
-  }else{
-    q <- "MATCH (n)-[r]->()
-    RETURN COUNT(r)"
   }
   unname(unlist(call_api(q, con)))
 }
@@ -186,6 +186,15 @@ get_available_rel_types <- function(con){
   res <- call_api(q, con)
   res$type %>% pull(1)
 }
+
+#' @export
+get_edge_count_by_rel_type <- function(con = con){
+  rel_types <- get_available_rel_types(con)
+  rel_types <- c(rel_types)
+  x <- map_int(rel_types, ~get_edge_count(rel_type = ., con))
+  data_frame(rel_types = rel_types, edge_count = x)
+}
+
 
 #' @export
 delete_edges <- function(con){

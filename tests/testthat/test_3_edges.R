@@ -1,6 +1,6 @@
-context("test")
+context("Edges funs")
 
-test_that("test",{
+test_that("edges funs",{
 
   # MAKE SURE NEO4J IS UP: neo4j start
 
@@ -17,6 +17,8 @@ test_that("test",{
 
   csv_url <- "https://raw.githubusercontent.com/jpmarindiaz/neo4rutils/master/inst/data/movies.csv"
   load_nodes_csv(csv_url, label = "Movie", con = con)
+  csv_url <- "https://raw.githubusercontent.com/jpmarindiaz/neo4rutils/master/inst/data/persons.csv"
+  load_nodes_csv(csv_url, label = "Person", con = con)
 
 
   # TEST LOAD EDGES
@@ -86,8 +88,7 @@ test_that("test",{
   nodes <- get_nodes_table(con = con)
 
   alledges <- get_edges_table(rel_type = NULL, con)
-
-  edges1 <- get_edges_rel_type_table("TEST1", con, src_cols = "uid", tgt_cols = "uid")
+  edges1 <- get_edges_rel_type_table("TEST1", con, src_cols = c("uid","country"), tgt_cols = "uid")
 
   expect_equal(nrow(d), nrow(edges1))
 
@@ -106,6 +107,8 @@ test_that("test",{
   edges <- get_edges_table(con = con)
   expect_equal(nrow(edges), nrow(edges1) + nrow(edges2))
 
+  ## TODO... Add edges with no REL_TYPE
+  get_edge_count_by_rel_type(con)
 
 
   # ### TODO FIX rel_type

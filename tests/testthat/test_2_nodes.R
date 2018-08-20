@@ -1,6 +1,6 @@
-context("test")
+context("Nodes funs")
 
-test_that("test",{
+test_that("nodes funs",{
 
   # MAKE SURE NEO4J IS UP: neo4j start
   con <- neo4j_api$new(url = "http://localhost:7474",

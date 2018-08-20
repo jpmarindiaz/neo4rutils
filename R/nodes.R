@@ -56,8 +56,6 @@ get_node_count <- function(label = NULL, con = con){
     q <- "MATCH (n:{label})\nRETURN COUNT(n)"
     q <- str_tpl_format(q,list(label = label))
   }
-
-
   unname(unlist(call_api(q, con)))
 }
 
