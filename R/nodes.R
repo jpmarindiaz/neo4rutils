@@ -21,7 +21,7 @@ create_nodes <- function(nodes, label = NULL, con = con, show_query = FALSE){
 
 #' @export
 load_nodes_csv <- function(csv_url, label, con, show_query = FALSE){
-  #csv_url <- "https://raw.githubusercontent.com/jpmarindiaz/RNeo4jUtils/master/inst/data/movies.csv"
+  #csv_url <- "https://raw.githubusercontent.com/jpmarindiaz/neo4rutils/master/inst/data/movies.csv"
   d <- read_csv(csv_url, n_max = 5)
   props <- paste0("csvLine.",names(d))
   names(props) <- names(d)

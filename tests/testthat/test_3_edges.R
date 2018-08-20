@@ -67,7 +67,6 @@ test_that("test",{
 
   nodes <- get_nodes_table(con = con)
 
-
   edges1 <- get_edges_rel_type_table("TEST1", con)
   expect_equal(nrow(d), nrow(edges1))
 

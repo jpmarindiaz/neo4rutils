@@ -78,7 +78,7 @@ prep_edges_load_query <- function(d = NULL,
                tgt_col = tgt_col, tgt_uid_prop = tgt_uid_prop,
                rel_type = rel_type,
                props = props)
-  # USING PERIODIC COMMIT 50 LOAD CSV WITH HEADERS FROM 'https://raw.githubusercontent.com/jpmarindiaz/RNeo4jUtils/master/inst/data/roles.csv' AS csvLine
+  # USING PERIODIC COMMIT 50 LOAD CSV WITH HEADERS FROM 'https://raw.githubusercontent.com/jpmarindiaz/neo4rutils/master/inst/data/roles.csv' AS csvLine
   # MERGE (n1:Person{id:csvLine.personId})
   # MERGE (n2:Movie{id:csvLine.movieId})
   # MERGE (n1)-[r:TEST2333]->(n2)
