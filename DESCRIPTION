@@ -9,9 +9,9 @@ Description: Utility functions to complement the RNeo4j package
 Depends:
     R (>= 3.1.2),
     tidyverse,
+    neo4r,
     glue
 Imports:
-    neo4r
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

@@ -47,18 +47,24 @@ load_nodes_csv <- function(csv_url, label, con, show_query = FALSE){
 
 #' @export
 get_node_count <- function(label = NULL, con = con){
-  if(!is.null(label)){
+  if(is.null(label)){
+    q <- "MATCH (n)\nRETURN COUNT(n)"
+  }else if(is.na(label)){
+    q <- "MATCH (n) \nWHERE size(labels(n)) = 0\nRETURN COUNT(n)"
+    }
+  else {
     q <- "MATCH (n:{label})\nRETURN COUNT(n)"
     q <- str_tpl_format(q,list(label = label))
-  }else{
-    q <- "MATCH (n)\nRETURN COUNT(n)"
   }
+
+
   unname(unlist(call_api(q, con)))
 }
 
 #' @export
 get_node_count_by_label <- function(con){
-  labels <- con$get_labels() %>% pull(labels)
+  labels <- get_available_labels(con)
+  labels <- c(labels,NA)
   x <- map_int(labels, ~get_node_count(label = ., con))
   data_frame(label = labels, node_count = x)
 }
@@ -66,7 +72,9 @@ get_node_count_by_label <- function(con){
 #' @export
 get_label_node_count <- function(label = NULL, con = NULL){
   labelin <- label
-  get_node_count_by_label(con) %>%
+  x <- get_node_count_by_label(con)
+  if(!label %in% x$label) return(0)
+  x %>%
     filter(label == labelin) %>%
     pull(node_count)
 }
@@ -87,16 +95,20 @@ get_node_by_id <- function(.id, con = con, asList = TRUE){
 }
 
 #' @export
-get_node_by_uid <- function(uid, prop, label = NULL, con = NULL, asList = TRUE){
+get_node_by_uid <- function(uid, prop = "uid", label = NULL, con = NULL, asList = TRUE){
   if(is.character(uid)){
     uid <- paste0("'",uid,"'")
   }
-  if(!prop %in% con$get_constraints()$property_keys)
-    stop(prop, " needs to be a unique constraint")
   if(is.null(label)){
     q <- "MATCH (n) WHERE n.{prop} = {uid} RETURN ID(n),n"
     q <- str_tpl_format(q,list(uid = uid, prop = prop))
   }else{
+    labelIn <- label
+    currentLabelConstraints <- get_constraints(con) %>%
+      filter(label == labelIn) %>% pull(property_keys)
+    if(!prop %in% currentLabelConstraints){
+      stop(prop, " needs to be a unique constraint for label: ", label)
+    }
     q <- "MATCH (n:{label}) WHERE n.{prop} = {uid} RETURN ID(n),n"
     q <- str_tpl_format(q,list(uid = uid, prop = prop, label = label))
   }
@@ -130,24 +142,38 @@ get_node_keys <- function(label = NULL, con = NULL, asTable = TRUE){
 }
 
 #' @export
+get_available_labels <- function(con){
+  con$get_labels() %>% pull(labels)
+}
+
+#' @export
 get_nodes_table <- function(label = NULL, con = NULL){
-  labels <- con$get_labels() %>% pull(labels)
-  if(!is.null(label) && !label %in% labels) stop("label not in Labels")
-  if(!is.null(label) && get_label_node_count(label, con) == 0) return(data_frame(.id = numeric(0)))
-  q <- ifelse(is.null(label),"MATCH (n)\nRETURN ID(n),n","MATCH (n:{label})\nRETURN ID(n),n")
-  if(!is.null(label)) q <- str_tpl_format(q, list(label = label))
-  nodes <- call_api(q, con)
-  #nodes <- call_api(q, con, type = "graph")$nodes
-  ids <- nodes[[1]] %>% select(.id = value)
-  nodesdf <- nodes[[2]]
-  if(!"data.frame" %in% class(nodesdf)){
-    common_vars <- names(transpose(nodesdf))
-    nodesdf <- map(nodesdf, function(x){
-      x[common_vars] <- map(common_vars, ~as.character(x[[.]]))
-      x
-    }) %>% bind_rows()
+  if(is.null(label)){
+    q <- "MATCH (n)\nRETURN ID(n),labels(n),n"
+    res <- call_api(q, con, type = "graph")
+    if(is.null(res)) return()
+    ids_labels <- res$nodes %>%
+      select(.id = id, .label = label) %>%
+      mutate(.id = as.integer(.id))
+    ids_labels$.label <- map_chr(ids_labels$.label,~ifelse(length(.)==0,NA,.))
+    nodesdf <- res$nodes[[3]] %>% bind_rows()
+    return(bind_cols(ids_labels,nodesdf))
+  } else if(is.na(label)){
+    q <- "MATCH (n) \nWHERE size(labels(n)) = 0\nRETURN ID(n),n"
+    q <- str_tpl_format(q, list(label = label))
+    res <- call_api(q, con, type = "row")
+    ids <- res[[1]] %>% select(.id = value) %>% mutate(.label=label)
+    return(bind_cols(ids,res[[2]]))
+  } else{
+    labels <- get_available_labels(con)
+    if(!label %in% labels) stop("label not in Labels")
+    if(get_label_node_count(label, con) == 0) return(data_frame(.id = numeric(0)))
+    q <- "MATCH (n:{label})\nRETURN ID(n),n"
+    q <- str_tpl_format(q, list(label = label))
+    res <- call_api(q, con, type = "row")
+    ids <- res[[1]] %>% select(.id = value) %>% mutate(.label=label)
+    return(bind_cols(ids,res[[2]]))
   }
-  bind_cols(ids,nodesdf)
 }
 
 #' @export
@@ -207,8 +233,8 @@ delete_labeled_nodes <- function(label = NULL, con = NULL, withRels = FALSE){
   }
   q <- str_tpl_format(q,list(label = label))
   call_api(q,con)
-  get_label_node_count(label = "Movie", con = con) == 0
-  }
+  get_label_node_count(label = label, con = con) == 0
+}
 
 
 

@@ -107,6 +107,7 @@ get_edges_rel_type_table <- function(rel_type, con, src_cols = NULL, tgt_cols = 
   q <- glue("MATCH (n1)-[r:{rel_type}]->(n2) RETURN n1,r,n2")
   res <- call_api(q, con, meta = TRUE)
   edges <- res$r %>% select(.rel_id = id, everything(), -type, -deleted)
+  #get_constraints(con)
   n1 <- res$n1 %>% select(.src_id = id, one_of(src_cols))
   n2 <- res$n2 %>% select(.tgt_id = id, one_of(tgt_cols))
   edges <- bind_cols(n1,edges,n2) %>%
