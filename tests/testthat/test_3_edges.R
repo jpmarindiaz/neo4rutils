@@ -18,6 +18,7 @@ test_that("test",{
   csv_url <- "https://raw.githubusercontent.com/jpmarindiaz/neo4rutils/master/inst/data/movies.csv"
   load_nodes_csv(csv_url, label = "Movie", con = con)
 
+
   # TEST LOAD EDGES
   csv_url <- system.file("data/roles.csv",package = "neo4rutils")
   d <- read_csv(csv_url)
@@ -37,6 +38,23 @@ test_that("test",{
                         tgt_col = tgt_col, tgt_label = tgt_label,
                         tgt_uid_prop = tgt_uid_prop, rel_props = rel_props,
                         con = con, show_query = show_query)
+
+  csv_url <- "https://raw.githubusercontent.com/jpmarindiaz/neo4rutils/master/inst/data/roles.csv"
+  load_edges_csv(csv_url = csv_url,
+                 rel_type = rel_type,
+                 src_col = src_col,
+                 src_label = src_label,
+                 src_uid_prop = src_uid_prop,
+                 tgt_col = tgt_col,
+                 tgt_label = tgt_label,
+                 tgt_uid_prop = tgt_uid_prop,
+                 rel_props = rel_props,
+                 con = con,
+                 show_query = TRUE)
+  alledges <- get_edges_table(rel_type = NULL, con)
+  expect_equal(get_edge_count(rel_type = NULL,con),7)
+  delete_edges(con)
+  expect_equal(get_edge_count(rel_type = NULL,con),0)
 
   src_col <- "personId"
   tgt_col <- "movieId"
@@ -69,7 +87,8 @@ test_that("test",{
 
   alledges <- get_edges_table(rel_type = NULL, con)
 
-  edges1 <- get_edges_rel_type_table("TEST1", con, src_cols = "uid")
+  edges1 <- get_edges_rel_type_table("TEST1", con, src_cols = "uid", tgt_cols = "uid")
+
   expect_equal(nrow(d), nrow(edges1))
 
   load_edges_csv(csv_url = csv_url,

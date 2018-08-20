@@ -111,8 +111,10 @@ get_edges_rel_type_table <- function(rel_type, con, src_cols = NULL, tgt_cols = 
   if(is.null(src_cols)) src_cols <- character(0)
   if(is.null(tgt_cols)) tgt_cols <- character(0)
   n1 <- res$n1 %>% select(.src_id = id, one_of(src_cols))
+  names(n1)[names(n1) %in% src_cols] <- paste0("src_",src_cols)
   n2 <- res$n2 %>% select(.tgt_id = id, one_of(tgt_cols))
-  edges <- bind_cols(n1,edges,n2) %>%
+  names(n2)[names(n2) %in% tgt_cols] <- paste0("tgt_",src_cols)
+  edges <- bind_cols(edges,n1,n2) %>%
     mutate(rel_type = rel_type) %>%
     select(rel_type, .rel_id, .src_id, .tgt_id, everything())
 }
@@ -166,11 +168,11 @@ load_edges_data_frame <- function(edges,
 }
 
 #' @export
-get_edge_count <- function(relType= NULL, con = con){
-  if(!is.null(relType)){
-    q <- "MATCH (n)-[r:`{relType}`]-(m)
+get_edge_count <- function(rel_type= NULL, con = con){
+  if(!is.null(rel_type)){
+    q <- "MATCH (n)-[r:`{rel_type}`]-(m)
     RETURN COUNT(r)"
-    q <- str_tpl_format(q,list(relType = relType))
+    q <- str_tpl_format(q,list(rel_type = rel_type))
   }else{
     q <- "MATCH (n)-[r]-(m)
     RETURN COUNT(r)"
@@ -183,5 +185,12 @@ get_available_rel_types <- function(con){
   q <- "MATCH (n)-[r]-(m) RETURN DISTINCT type(r) AS type"
   res <- call_api(q, con)
   res$type %>% pull(1)
+}
+
+#' @export
+delete_edges <- function(con){
+  q <- "MATCH ()-[r]-()\nDELETE r"
+  res <- call_api(q, con)
+  get_edge_count(rel_type = NULL, con)
 }
 
