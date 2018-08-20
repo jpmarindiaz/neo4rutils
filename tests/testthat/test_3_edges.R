@@ -26,8 +26,8 @@ test_that("test",{
   src_col <- "personId"
   tgt_col <- "movieId"
   rel_type <- "MYREL"
-  src_uid_prop <- "id"
-  tgt_uid_prop <- "id"
+  src_uid_prop <- "uid"
+  tgt_uid_prop <- "uid"
   src_label <- NULL
   tgt_label <- NULL
   rel_props <- NULL
@@ -40,8 +40,8 @@ test_that("test",{
 
   src_col <- "personId"
   tgt_col <- "movieId"
-  src_uid_prop <- "id"
-  tgt_uid_prop <- "id"
+  src_uid_prop <- "uid"
+  tgt_uid_prop <- "uid"
   src_label <- "Person"
   tgt_label <- "Movie"
   rel_type <- "TEST1"
@@ -67,7 +67,9 @@ test_that("test",{
 
   nodes <- get_nodes_table(con = con)
 
-  edges1 <- get_edges_rel_type_table("TEST1", con)
+  alledges <- get_edges_table(rel_type = NULL, con)
+
+  edges1 <- get_edges_rel_type_table("TEST1", con, src_cols = "uid")
   expect_equal(nrow(d), nrow(edges1))
 
   load_edges_csv(csv_url = csv_url,

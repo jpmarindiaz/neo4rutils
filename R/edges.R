@@ -91,7 +91,7 @@ prep_edges_load_query <- function(d = NULL,
 #' @export
 get_edges_table <- function(rel_type = NULL, con = NULL){
   if(is.null(rel_type)){
-    rel_types <- con$get_relationships() %>% pull(1)
+    rel_types <- get_available_rel_types(con)
     edges <- map(rel_types, ~get_edges_rel_type_table(.,con)) %>%
       bind_rows()
   }else{
@@ -108,6 +108,8 @@ get_edges_rel_type_table <- function(rel_type, con, src_cols = NULL, tgt_cols = 
   res <- call_api(q, con, meta = TRUE)
   edges <- res$r %>% select(.rel_id = id, everything(), -type, -deleted)
   #get_constraints(con)
+  if(is.null(src_cols)) src_cols <- character(0)
+  if(is.null(tgt_cols)) tgt_cols <- character(0)
   n1 <- res$n1 %>% select(.src_id = id, one_of(src_cols))
   n2 <- res$n2 %>% select(.tgt_id = id, one_of(tgt_cols))
   edges <- bind_cols(n1,edges,n2) %>%

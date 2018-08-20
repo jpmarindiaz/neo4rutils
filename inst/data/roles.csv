@@ -1,8 +1,8 @@
 personId,movieId,role, prop1,prop2
-p1,1,Bud Fox,as,AT
-p4,1,Carl Fox,re,EM
-p3,1,Gordon Gekko,we,RE
-p4,2,A.J. MacInerney,to,RM
-p3,2,President Andrew Shepherd,de,WM
-p5,3,Ellis Boyd 'Red' Redding,sa,BO
+p1,wall-street,Bud Fox,as,AT
+p4,wall-street,Carl Fox,re,EM
+p3,wall-street,Gordon Gekko,we,RE
+p4,the-american-president,A.J. MacInerney,to,RM
+p3,the-american-president,President Andrew Shepherd,de,WM
+p5,the-shawshank-redemption,Ellis Boyd 'Red' Redding,sa,BO
 p6,la-estrategia,El abogado,es,CA
