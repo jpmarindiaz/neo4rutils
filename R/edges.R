@@ -170,11 +170,11 @@ load_edges_data_frame <- function(edges,
 #' @export
 get_edge_count <- function(rel_type= NULL, con = con){
   if(!is.null(rel_type)){
-    q <- "MATCH (n)-[r:`{rel_type}`]-(m)
+    q <- "MATCH (n)-[r:`{rel_type}`]->(m)
     RETURN COUNT(r)"
     q <- str_tpl_format(q,list(rel_type = rel_type))
   }else{
-    q <- "MATCH (n)-[r]-(m)
+    q <- "MATCH (n)-[r]->()
     RETURN COUNT(r)"
   }
   unname(unlist(call_api(q, con)))
