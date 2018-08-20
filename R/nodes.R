@@ -30,7 +30,7 @@ load_nodes_csv <- function(csv_url, label, con, show_query = FALSE){
   on_load_query <- str_tpl_format(qtpl, list(label = label, props = props))
   if(show_query) message(on_load_query)
   load_csv(url = csv_url,
-           con = con, header = TRUE, periodic_commit = 50,
+           con = con, header = TRUE, periodic_commit = 1000,
            as = "csvLine", on_load = on_load_query)
 
   #   on_load_query <- 'MERGE (a:artist { name: csvLine.artist})

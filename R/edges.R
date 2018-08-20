@@ -43,7 +43,7 @@ load_edges_csv <- function(csv_url = NULL,
                                          show_query = show_query)
   if(show_query) message(on_load_query)
   load_csv(url = csv_url,
-           con = con, header = TRUE, periodic_commit = 50,
+           con = con, header = TRUE, periodic_commit = 1000,
            as = "csvLine", on_load = on_load_query)
 }
 
