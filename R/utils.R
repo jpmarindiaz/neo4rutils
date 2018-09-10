@@ -57,6 +57,16 @@ list_to_name_value <- function(l){
   transpose(list(name = names(l), value = unname(l)))
 }
 
+list_to_df <- function(x){
+  bind_rows_safely <- safely(bind_rows)
+  y <- bind_rows_safely(x)
+  if(is.null(y$result)){
+    x2 <- map(x,~map(.,as.character))
+    y <- bind_rows_safely(x2)
+  }
+  y$result
+}
+
 
 match_replace <- function (v, dic, force = TRUE){
   matches <- dic[[2]][match(v, dic[[1]])]

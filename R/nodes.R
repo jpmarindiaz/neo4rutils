@@ -170,7 +170,8 @@ get_nodes_table <- function(label = NULL, con = NULL){
     q <- str_tpl_format(q, list(label = label))
     res <- call_api(q, con, type = "row")
     ids <- res[[1]] %>% select(.id = value) %>% mutate(.label=label)
-    return(bind_cols(ids,res[[2]]))
+    ns <- list_to_df(res[[2]])
+    return(bind_cols(ids,ns))
   }
 }
 
