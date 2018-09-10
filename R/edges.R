@@ -94,10 +94,13 @@ prep_edges_load_query <- function(d = NULL,
 
 
 #' @export
-get_edges_table <- function(rel_type = NULL, con = NULL){
+get_edges_table <- function(rel_type = NULL, con = NULL, debug = FALSE){
   if(is.null(rel_type)){
     rel_types <- get_available_rel_types(con)
-    edges <- map(rel_types, ~get_edges_rel_type_table(.,con)) %>%
+    edges <- map(rel_types, function(x){
+      if(debug) message(x)
+      get_edges_rel_type_table(x,con)
+      }) %>%
       bind_rows()
   }else{
     edges <- get_edges_rel_type_table(rel_type, con)
@@ -109,15 +112,15 @@ get_edges_table <- function(rel_type = NULL, con = NULL){
 get_edges_rel_type_table <- function(rel_type, con, src_cols = NULL, tgt_cols = NULL){
   if(!rel_type %in% get_available_rel_types(con))
     stop("Rel type not in db")
-  q <- glue("MATCH (n1)-[r:{rel_type}]->(n2) RETURN n1,r,n2")
+  q <- glue("MATCH (n1)-[r:`{rel_type}`]->(n2) RETURN n1,r,n2")
   res <- call_api(q, con, meta = TRUE)
   edges <- res$r %>% select(.rel_id = id, everything(), -type, -deleted)
   #get_constraints(con)
   if(is.null(src_cols)) src_cols <- character(0)
   if(is.null(tgt_cols)) tgt_cols <- character(0)
-  n1 <- res$n1 %>% select(.src_id = id, one_of(src_cols))
+  n1 <- list_to_df(res$n1) %>% select(.src_id = id, one_of(src_cols))
   names(n1)[names(n1) %in% src_cols] <- paste0("src_",src_cols)
-  n2 <- res$n2 %>% select(.tgt_id = id, one_of(tgt_cols))
+  n2 <- list_to_df(res$n2) %>% select(.tgt_id = id, one_of(tgt_cols))
   names(n2)[names(n2) %in% tgt_cols] <- paste0("tgt_",src_cols)
   edges <- bind_cols(edges,n1,n2) %>%
     mutate(rel_type = rel_type) %>%

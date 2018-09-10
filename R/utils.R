@@ -61,7 +61,19 @@ list_to_df <- function(x){
   bind_rows_safely <- safely(bind_rows)
   y <- bind_rows_safely(x)
   if(is.null(y$result)){
-    x2 <- map(x,~map(.,as.character))
+    cls <- map(x, function(.x){
+      map(.x, class)
+    })
+    vars <- bind_rows(cls) %>%
+      map(~length(unique(na.omit(.)))) %>%
+      keep(~. > 1) %>% names()
+    x2 <- map(x,function(.x){
+      if(any(vars %in% names(.x))){
+        vars_in <- vars[vars %in% names(.x)]
+        .x[vars_in] <- map(.x[vars_in], as.character)
+      }
+      .x
+    })
     y <- bind_rows_safely(x2)
   }
   y$result
