@@ -1,7 +1,8 @@
 #' @export
 create_nodes <- function(nodes, label = NULL, con = con, show_query = FALSE){
   #nodes <- list(list(Name = "jp", age = 32), list(Name = "Ey",age = 23))
-  #nodes <- list(id = "New movie", country = "COL", vals = c("val1", "val2"))
+  #nodes <- list(list(id = "New movie", country = "COL", vals = "valsss"))
+  #nodes <- list(list(id = "New movie", country = "COL", vals = c("val1", "val2")))
   #label <- "Movie"
   if(!is.null(label)){
     qtpl <- 'CREATE (a{idx}:{label}{{prop}})'
@@ -13,10 +14,15 @@ create_nodes <- function(nodes, label = NULL, con = con, show_query = FALSE){
   props <- map(nodes, write_props_cypher)
   l <- map(seq_along(props), ~list(prop = props[[.]], label = label, idx=.))
   q <- str_tpl_format_map(l, qtpl)
-  ret <- paste0(paste("a",1:length(props),sep = ""),collapse=",")
-  q <- paste0(paste0(q, collapse = "\n"), paste("\nRETURN ",ret))
+  ret_nodes <- paste("a",1:length(props),sep = "")
+  # ret <- map(ret_nodes, function(x){
+  #   paste0("ID(",x,"), ",x)
+  # }) %>% paste0(.,collapse = ", ")
+  ret <- ret_nodes %>% paste0(.,collapse = ", ")
+  q <- paste0(paste0(q, collapse = "\n"), paste0("\nRETURN ",ret))
   if(show_query) message(q)
-  call_api(q, con)
+  x <- call_api(q, con, meta = TRUE)
+  x %>% bind_rows() %>% select(.id = id, everything())
 }
 
 #' @export
