@@ -200,7 +200,7 @@ delete_node <- function(.id, con = NULL, withRels = FALSE){
   }
 
 #' @export
-delete_node_by_uid <- function(uid, prop, label, graph = NULL, withRels = FALSE){
+delete_node_by_uid <- function(uid, prop = "uid", label = NULL, con = NULL, withRels = FALSE){
   if(is.character(uid)){
     uid <- paste0("'",uid,"'")
   }
@@ -216,7 +216,7 @@ delete_node_by_uid <- function(uid, prop, label, graph = NULL, withRels = FALSE)
     DELETE n"
   }
   q <- str_tpl_format(q,list(uid=uid,label = label, prop = prop))
-  cypher(graph,q)
+  call_api(q,con)
   TRUE
   }
 

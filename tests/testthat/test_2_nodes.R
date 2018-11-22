@@ -59,18 +59,22 @@ test_that("nodes funs",{
   delete_node(sample(movies$.id,1),con)
   expect_equal(get_node_count("Movie",con),4)
 
+
   delete_labeled_nodes(label = "Movie",con = con)
   expect_equal(get_label_node_count("Movie",con),0)
 
   people <- read_csv(system.file("data/persons.csv",package = "neo4rutils"))
   load_nodes_df(people,"Person",con)
+
   expect_equal(get_label_node_count("Person",con),6)
+
+  delete_node_by_uid("p6",label = "Person", con = con)
 
   people <- get_nodes_table("Person",con)
   movies <- get_nodes_table(label = "Movie",con = con)
   load_nodes_csv(csv_url, "Movie", con)
   allNodes <- get_nodes_table(con = con)
-  expect_true(nrow(allNodes) == 11)
+  expect_true(nrow(allNodes) == 10)
 
   random_id <- sample(allNodes$.id,1)
   n <- get_node_by_id(random_id, con = con)
