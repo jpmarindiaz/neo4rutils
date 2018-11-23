@@ -1,7 +1,7 @@
 #' @export
 create_nodes <- function(nodes, label = NULL, con = con, show_query = FALSE){
   #nodes <- list(list(Name = "jp", age = 32), list(Name = "Ey",age = 23))
-  #nodes <- list(list(title = "New movie", country = "COL", vals = "valsss"))
+  #nodes <- list(list(title = "New movie", country = "COL", vals = c("valsss","other")))
   #label <- "Movie"
   if(!is.null(label)){
     qtpl <- 'CREATE (a{idx}:{label}{{prop}})'
@@ -20,8 +20,23 @@ create_nodes <- function(nodes, label = NULL, con = con, show_query = FALSE){
   ret <- ret_nodes %>% paste0(.,collapse = ", ")
   q <- paste0(paste0(q, collapse = "\n"), paste0("\nRETURN ",ret))
   if(show_query) message(q)
-  res <- call_cypher(q, con)
-  res
+  d <- call_cypher(q, con)
+
+  # Clean up response
+  drow <- d$data$row
+  dmeta <- d$data$meta
+  if(length(dmeta[[1]]) > 1){
+    drow <- drow[[1]]
+    dmeta <- dmeta[[1]]
+  }else{
+    drow <- map(drow,1)
+    dmeta <- map(dmeta,1)
+  }
+  drow <- jsonlite::fromJSON(jsonlite::toJSON(drow))
+  dmeta <-  dmeta %>%
+    bind_rows() %>%
+    select(.id = id, .type = type, .deleted = deleted)
+  bind_cols(drow,dmeta)
 }
 
 #' @export
@@ -56,7 +71,7 @@ get_node_count <- function(label = NULL, con = con){
     q <- "MATCH (n)\nRETURN COUNT(n)"
   }else if(is.na(label)){
     q <- "MATCH (n) \nWHERE size(labels(n)) = 0\nRETURN COUNT(n)"
-    }
+  }
   else {
     q <- "MATCH (n:{label})\nRETURN COUNT(n)"
     q <- str_tpl_format(q,list(label = label))
@@ -151,33 +166,55 @@ get_available_labels <- function(con){
 
 #' @export
 get_nodes_table <- function(label = NULL, con = NULL){
+
   if(is.null(label)){
-    q <- "MATCH (n)\nRETURN ID(n),labels(n),n"
-    res <- call_api(q, con, type = "graph")
-    if(is.null(res)) return()
-    ids_labels <- res$nodes %>%
-      select(.id = id, .label = label) %>%
-      mutate(.id = as.integer(.id))
-    ids_labels$.label <- map_chr(ids_labels$.label,~ifelse(length(.)==0,NA,.))
-    nodesdf <- res$nodes[[3]] %>% bind_rows()
-    return(bind_cols(ids_labels,nodesdf))
-  } else if(is.na(label)){
-    q <- "MATCH (n) \nWHERE size(labels(n)) = 0\nRETURN ID(n),n"
+    q <- "MATCH (n)\nRETURN ID(n) as `.id`,labels(n) as `.label`,n"
+  }else{
+    if(is.na(label)){
+      q <- "MATCH (n) \nWHERE size(labels(n)) = 0\nRETURN n"
+      q <- str_tpl_format(q, list(label = label))
+      d <- call_cypher(q, con)
+      if(is.null(d$data)) return()
+
+      drow <- d$data$row
+      dmeta <- d$data$meta
+
+      drow <- map(drow,1)
+      drow <- jsonlite::fromJSON(jsonlite::toJSON(drow))
+      dmeta <- map(dmeta,1) %>% bind_rows() %>%
+        select(.id = id, .type = type, .deleted = deleted)
+
+      return(flatten_df_list(bind_cols(drow,dmeta)))
+    }
+    if(!label %in% get_available_labels(con)) stop("label not in Labels")
+    q <- "MATCH (n:{label})\nRETURN ID(n) as `.id`,labels(n) as `.label`,n"
     q <- str_tpl_format(q, list(label = label))
-    res <- call_api(q, con, type = "row")
-    ids <- res[[1]] %>% select(.id = value) %>% mutate(.label=label)
-    return(bind_cols(ids,res[[2]]))
-  } else{
-    labels <- get_available_labels(con)
-    if(!label %in% labels) stop("label not in Labels")
-    if(get_label_node_count(label, con) == 0) return(data_frame(.id = numeric(0)))
-    q <- "MATCH (n:{label})\nRETURN ID(n),n"
-    q <- str_tpl_format(q, list(label = label))
-    res <- call_api(q, con, type = "row")
-    ids <- res[[1]] %>% select(.id = value) %>% mutate(.label=label)
-    ns <- list_to_df(res[[2]])
-    return(bind_cols(ids,ns))
   }
+  d <- call_cypher(q, con)
+  if(is.null(d$data)) return()
+
+  drow <- d$data$row
+  dmeta <- d$data$meta
+
+  drow <- map(drow, ~set_names(.,d$columns))
+  dmeta <- d$meta
+
+  drowt <- transpose(drow)
+  hasManyElements <- function(x) any(map(x, length) > 1)
+  hasMany <- map_lgl(drowt, hasManyElements)
+  drowtDf <- drowt[hasMany][[1]]
+  drowtDf <- jsonlite::fromJSON(jsonlite::toJSON(drowtDf))
+  drowtMeta <- drowt[!hasMany]
+  drowtMeta <- map(drowtMeta, function(x){
+    x[map_lgl(x,is_empty)] <- NA
+    unlist(x)
+  }) %>% as_data_frame()
+  if(nrow(drowtMeta) > 0){
+    dres <- cbind(drowtDf, drowtMeta)
+  }else{
+    dres <- drowtDf
+  }
+  flatten_df_list(dres)
 }
 
 #' @export
@@ -202,7 +239,7 @@ delete_node <- function(.id, con = NULL, withRels = FALSE){
   q <- str_tpl_format(q,list(.id = .id))
   call_api(q, con)
   TRUE
-  }
+}
 
 #' @export
 delete_node_by_uid <- function(uid, prop = "uid", label = NULL, con = NULL, withRels = FALSE){
@@ -221,9 +258,11 @@ delete_node_by_uid <- function(uid, prop = "uid", label = NULL, con = NULL, with
     DELETE n"
   }
   q <- str_tpl_format(q,list(uid=uid,label = label, prop = prop))
-  call_api(q,con)
+  if(is.null(label))
+    q <- gsub(":{label}","",q, fixed = TRUE)
+  d <- call_cypher(q,con)
   TRUE
-  }
+}
 
 #' @export
 delete_labeled_nodes <- function(label = NULL, con = NULL, withRels = FALSE){

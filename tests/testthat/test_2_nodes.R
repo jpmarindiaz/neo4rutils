@@ -9,7 +9,7 @@ test_that("nodes funs",{
   drop_all_constraints(con)
 
   # Test functions with no nodes
-  get_nodes_table(con = con)
+  expect_equal(NULL,get_nodes_table(con = con))
 
   # Create Nodes
   new_nodes <- list(list(nam = "x", id = "newnode"))
@@ -37,30 +37,40 @@ test_that("nodes funs",{
   keys <- get_node_keys(con = con, asTable = TRUE)
   expect_true(all(c("year","id","title","country","nam") %in% keys$key))
 
-  ## TODOOO Test nodes with array properties
-  #new_node <- list(title = "New movie", uid = "new-movie",country = "COL", vals = c("val1", "val2"))
-
   new_node <- list(id = "New movie", country = "COL", vals = "valsss")
   node <- create_nodes(list(new_node),label = "Movie", con = con)
   expect_equal(get_node_count("Movie",con),5)
 
 
-  new_nodes <- list(list(id = "New movie", country = "USA", vals = c("val1", "val2")),
-                    list(id = "New movie 2", country = "COL", values = c("x", "y")))
+  new_nodes <- list(list(id = "new-1", country = "USA", vals = c("val1", "val2")),
+                    list(id = "new-2", country = "COL", values = c("x", "y")))
+  nodes <- create_nodes(new_nodes,label = "Movie", con = con)
+  expect_equal(get_node_count("Movie",con),7)
 
-
-  # node$.id... TODO ADD TEST for .id
+  expect_equal(nrow(get_nodes_table(label = "Movie", con)), 7)
+  delete_node_by_uid("new-1",prop = "id","Movie",con = con)
+  delete_node_by_uid("new-2",prop = "id","Movie",con = con)
+  expect_equal(nrow(get_nodes_table(label = "Movie", con)), get_node_count("Movie",con))
 
   # Test get nodes table
   all_nodes <- get_nodes_table(con = con)
   movies <- get_nodes_table(label = "Movie", con = con)
+
   na_labels <- get_nodes_table(label = NA, con = con)
-  expect_equal(all_nodes,bind_rows(na_labels,movies))
+  #create_nodes(list(list(id = "No label", country = "RUS")),label = NULL, con = con)
+  #na_labels <- get_nodes_table(label = NA, con = con)
+  #delete_node_by_uid("No label",uid = "id",label = NULL,con = con)
+
+  all_nodes2 <- bind_rows(na_labels,movies)
+  expect_equal(all_nodes,all_nodes2 %>% select(-.deleted, -.type))
+  expect_equal(nrow(all_nodes),nrow(all_nodes2))
   expect_error(get_nodes_table(label = "NonExistent",con),"label not in Labels")
 
   movies_url <- read_csv(csv_url, col_types = cols(.default = "c"))
   movies2 <- movies[names(movies_url)] %>% filter(!is.na(uid))
-  expect_equal(movies_url,movies2)
+  expect_equal(nrow(movies_url),nrow(movies2))
+  expect_equal(names(movies_url),names(movies2))
+
 
   delete_node(sample(movies$.id,1),con)
   expect_equal(get_node_count("Movie",con),4)

@@ -2,6 +2,10 @@
 #' @export
 call_cypher <- function (query, con)
 {
+  #query <- 'MATCH (n:Movie)\nRETURN n'
+  #query <- 'MATCH (n) \nWHERE size(labels(n)) = 0\nRETURN n'
+  #query <- "MATCH (n)\nRETURN ID(n) as `.id`,labels(n) as `.label`,n"
+
   include_stats <- TRUE
   query_clean <- clean_query(query)
   query_jsonised <- to_json_neo(query_clean)
@@ -9,11 +13,24 @@ call_cypher <- function (query, con)
                .open = "%", .close = "%")
   res <- POST(url = glue("{con$url}/db/data/transaction/commit?includeStats=true"),
               add_headers(.headers = c(`Content-Type` = "application/json",
-                                       accept = "application/json", Authorization = paste0("Basic ",
-                                                                                           con$auth))), body = body)
+                                       accept = "application/json",
+                                       Authorization = paste0("Basic ",con$auth))),
+              body = body)
   if(status_code(res) != 200) stop("API error")
 
-  parse_api_results(res = res)
+  api_content <- content(res)
+  if (length(api_content$errors) > 0) {
+    return(list(error_code = api_content$errors[[1]]$code,
+                error_message = api_content$errors[[1]]$message))
+  }
+  results <- api_content$results[[1]]
+  if (length(results$data) == 0) {
+    message("No data returned.")
+    return()
+  }
+  res_names <- results$columns
+  res_data <- results$data
+  list(columns = res_names, data = transpose(res_data))
 }
 
 
@@ -30,26 +47,13 @@ clean_query <- function (query) {
 }
 
 
-parse_api_results <- function (res){
-  api_content <- content(res)
-  if (length(api_content$errors) > 0) {
-    return(list(error_code = api_content$errors[[1]]$code,
-                error_message = api_content$errors[[1]]$message))
-  }
-  results <- api_content$results[[1]]
-  if (length(results$data) == 0) {
-    message("No data returned.")
-  }
-  res_names <- results$columns
-  res_data <- results$data
-
-  d <- transpose(res_data)
-  drow <- d$row[[1]]
-  drow <- jsonlite::fromJSON(jsonlite::toJSON(drow))
-  dmeta <- d$meta[[1]] %>%
-    bind_rows() %>%
-    select(.id = id, .type = type, .deleted = deleted)
-  bind_cols(drow,dmeta)
+flatten_df_list <- function(x){
+  map_df(x,function(y){
+    y[map_lgl(y,is.null)] <- NA
+    if(!any(map(y,length) > 1)){
+      y <- unlist(y)
+    }
+    y
+  })
 }
-
 
