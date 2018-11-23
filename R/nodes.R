@@ -36,7 +36,7 @@ create_nodes <- function(nodes, label = NULL, con = con, show_query = FALSE){
   dmeta <-  dmeta %>%
     bind_rows() %>%
     select(.id = id, .type = type, .deleted = deleted)
-  bind_cols(drow,dmeta)
+  flatten_df_list(bind_cols(drow,dmeta))
 }
 
 #' @export
