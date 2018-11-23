@@ -43,6 +43,12 @@ test_that("nodes funs",{
   new_node <- list(id = "New movie", country = "COL", vals = "valsss")
   node <- create_nodes(list(new_node),label = "Movie", con = con)
   expect_equal(get_node_count("Movie",con),5)
+
+
+  new_nodes <- list(list(id = "New movie", country = "USA", vals = c("val1", "val2")),
+                    list(id = "New movie 2", country = "COL", values = c("x", "y")))
+
+
   # node$.id... TODO ADD TEST for .id
 
   # Test get nodes table

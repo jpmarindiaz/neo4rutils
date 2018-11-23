@@ -1,8 +1,7 @@
 #' @export
 create_nodes <- function(nodes, label = NULL, con = con, show_query = FALSE){
   #nodes <- list(list(Name = "jp", age = 32), list(Name = "Ey",age = 23))
-  #nodes <- list(list(id = "New movie", country = "COL", vals = "valsss"))
-  #nodes <- list(list(id = "New movie", country = "COL", vals = c("val1", "val2")))
+  #nodes <- list(list(title = "New movie", country = "COL", vals = "valsss"))
   #label <- "Movie"
   if(!is.null(label)){
     qtpl <- 'CREATE (a{idx}:{label}{{prop}})'
@@ -21,8 +20,8 @@ create_nodes <- function(nodes, label = NULL, con = con, show_query = FALSE){
   ret <- ret_nodes %>% paste0(.,collapse = ", ")
   q <- paste0(paste0(q, collapse = "\n"), paste0("\nRETURN ",ret))
   if(show_query) message(q)
-  x <- call_api(q, con, meta = TRUE)
-  x %>% bind_rows() %>% select(.id = id, everything())
+  res <- call_cypher(q, con)
+  res
 }
 
 #' @export
