@@ -53,9 +53,10 @@ test_that("edges funs",{
                  rel_props = rel_props,
                  con = con,
                  show_query = TRUE)
+  get_edges_table(rel_type = "MYREL", con)
   alledges <- get_edges_table(rel_type = NULL, con)
   get_nodes_table(label = NULL,con)
-  print(get_edges_rel_type_table("MYREL", con, src_cols = c("uid"), tgt_cols = "uid"))
+  get_edges_rel_type_table("MYREL", con, src_cols = c("uid"), tgt_cols = "uid")
 
   expect_equal(get_edge_count(rel_type = NULL,con),7)
   delete_edges(con)

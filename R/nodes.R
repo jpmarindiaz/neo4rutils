@@ -76,7 +76,7 @@ get_node_count <- function(label = NULL, con = con){
     q <- "MATCH (n:{label})\nRETURN COUNT(n)"
     q <- str_tpl_format(q,list(label = label))
   }
-  unname(unlist(call_api(q, con)))
+  unname(unlist(call_neo4j(q, con)))
 }
 
 #' @export
@@ -106,14 +106,14 @@ get_node_by_id <- function(.id, con = con, asList = TRUE){
   WHERE ID(n) = {.id}
   RETURN n'
   q <- str_tpl_format(q,list(.id = .id))
-  n <- call_api(q, con)[[1]]
+  n <- call_neo4j(q, con)[[1]]
   n$.id <- .id
   if(asList) as.list(n)
   n
 }
 
 #' @export
-get_node_by_uid <- function(uid, prop = "uid", label = NULL, con = NULL, asList = TRUE){
+get_node_by_uid <- function(uid, prop = "uid", label = NULL, con = NULL, asList = FALSE){
   if(is.character(uid)){
     uid <- paste0("'",uid,"'")
   }
@@ -130,14 +130,13 @@ get_node_by_uid <- function(uid, prop = "uid", label = NULL, con = NULL, asList 
     q <- "MATCH (n:{label}) WHERE n.{prop} = {uid} RETURN ID(n),n"
     q <- str_tpl_format(q,list(uid = uid, prop = prop, label = label))
   }
-  n <- call_api(q, con)
+  n <- call_neo4j(q, con)
   if(length(n)==0){
     warning("uid not in db ", uid)
     return(NULL)
   }
-  nn <- data_frame(.id = n[[1]]$value)
-  nn <- bind_cols(nn, n[[2]])
-  if(asList) as.list(nn)
+  nn <- bind_cols(n[[2]],n[[1]]) %>% rename(.id = row)
+  if(asList) return(as.list(nn))
   nn
 }
 
@@ -149,7 +148,7 @@ get_node_keys <- function(label = NULL, con = NULL, asTable = TRUE){
     q <- "MATCH (p:{label}) RETURN id(p),keys(p);"
     q <- str_tpl_format(q,list(label = label))
   }
-  ans <- call_api(q,con, type = "row", output = "json")
+  ans <- call_neo4j(q,con, type = "row", output = "json")
   x <- jsonlite::fromJSON(ans)[[1]][[1]]
   keys <- map(x,~as.vector(.[[2]])) %>% set_names(map(x,~.[[1]]))
   if(asTable){
@@ -237,7 +236,7 @@ delete_node <- function(.id, con = NULL, withRels = FALSE){
     DELETE n"
   }
   q <- str_tpl_format(q,list(.id = .id))
-  call_api(q, con)
+  call_neo4j(q, con)
   TRUE
 }
 
@@ -275,7 +274,7 @@ delete_labeled_nodes <- function(label = NULL, con = NULL, withRels = FALSE){
     DELETE n"
   }
   q <- str_tpl_format(q,list(label = label))
-  call_api(q,con)
+  call_neo4j(q,con)
   get_label_node_count(label = label, con = con) == 0
 }
 

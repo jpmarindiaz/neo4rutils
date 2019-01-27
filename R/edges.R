@@ -13,7 +13,7 @@ create_edge <- function(src_id, tgt_id, rel_type, props, show_query = FALSE){
   vals <- list(src_id = src_id, tgt_id = tgt_id, rel_type = rel_type, props = props)
   q <- str_tpl_format(qtpl,vals)
   if(show_query) message(q)
-  call_api(q, con)
+  call_neo4j(q, con)
 }
 
 
@@ -112,17 +112,33 @@ get_edges_table <- function(rel_type = NULL, con = NULL, debug = FALSE){
 get_edges_rel_type_table <- function(rel_type, con, src_cols = NULL, tgt_cols = NULL){
   if(!rel_type %in% get_available_rel_types(con))
     stop("Rel type not in db")
-  q <- glue("MATCH (n1)-[r:`{rel_type}`]->(n2) RETURN n1,r,n2")
-  res <- call_api(q, con, meta = TRUE)
-  edges <- res$r %>% select(.rel_id = id, everything(), -type, -deleted)
-  #get_constraints(con)
-  if(is.null(src_cols)) src_cols <- character(0)
-  if(is.null(tgt_cols)) tgt_cols <- character(0)
-  n1 <- list_to_df(res$n1) %>% select(.src_id = id, one_of(src_cols))
-  names(n1)[names(n1) %in% src_cols] <- paste0("src_",src_cols)
-  n2 <- list_to_df(res$n2) %>% select(.tgt_id = id, one_of(tgt_cols))
-  names(n2)[names(n2) %in% tgt_cols] <- paste0("tgt_",src_cols)
-  edges <- bind_cols(edges,n1,n2) %>%
+  q <- glue("MATCH (n1)-[r:`{rel_type}`]->(n2) RETURN r,n1,n2")
+  res <- call_neo4j(q, con, type = "row", output = "json", include_meta = TRUE)
+  y <- jsonlite::fromJSON(res, simplifyVector = TRUE, simplifyDataFrame = FALSE)
+
+  cols <- c()
+  if(!is.null(src_cols))
+    cols <- c(cols,paste0("src_", src_cols))
+  if(!is.null(tgt_cols))
+    cols <- c(cols, paste0("tgt_", tgt_cols))
+  basic_cols <- c(".rel_id",".rel_type",".rel_deleted")
+  y2 <- map(y[[1]], function(x){
+    # x <- y[[1]][[1]]
+    basic_cols <- c(basic_cols, names(x$row[[1]]))
+    names(x$row[[2]]) <- paste0("src_",names(x$row[[2]]))
+    names(x$row[[3]]) <- paste0("tgt_",names(x$row[[3]]))
+    names(x$meta[[1]]) <- paste0(".rel_",names(x$meta[[2]]))
+    names(x$meta[[2]]) <- paste0(".src_",names(x$meta[[2]]))
+    names(x$meta[[3]]) <- paste0(".tgt_",names(x$meta[[3]]))
+    l <- c(unlist(x$row, recursive = FALSE),unlist(x$meta, recursive = FALSE))
+    idx <- grepl("src_|tgt_",names(l))
+    src_tgt_cols <- names(l)[idx]
+    if(length(cols) != 0){
+      src_tgt_cols <- src_tgt_cols[src_tgt_cols %in% c(".src_id", ".tgt_id", cols)]
+    }
+    as_tibble(l[names(l) %in% c(basic_cols, src_tgt_cols)])
+  }) %>% bind_rows()
+  y2 %>%
     mutate(rel_type = rel_type) %>%
     select(rel_type, .rel_id, .src_id, .tgt_id, everything())
 }
@@ -185,14 +201,15 @@ get_edge_count <- function(rel_type= NULL, con = con){
     q <- "MATCH (n)-[r:`{rel_type}`]->()\nRETURN COUNT(r)"
     q <- str_tpl_format(q,list(rel_type = rel_type))
   }
-  unname(unlist(call_api(q, con)))
+  unname(unlist(call_neo4j(q, con)))
 }
 
 #' @export
 get_available_rel_types <- function(con){
   q <- "MATCH (n)-[r]-(m) RETURN DISTINCT type(r) AS type"
-  res <- call_api(q, con)
-  res$type %>% pull(1)
+  res <- call_neo4j(q, con, output = "json")
+  types <- unlist(jsonlite::fromJSON(res)[[1]]$row)
+  types
 }
 
 #' @export
@@ -207,7 +224,7 @@ get_edge_count_by_rel_type <- function(con = con){
 #' @export
 delete_edges <- function(con){
   q <- "MATCH ()-[r]-()\nDELETE r"
-  res <- call_api(q, con)
+  res <- call_neo4j(q, con)
   get_edge_count(rel_type = NULL, con)
 }
 
