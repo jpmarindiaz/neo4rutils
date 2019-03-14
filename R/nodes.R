@@ -122,7 +122,11 @@ get_node_by_uid <- function(uid, prop = "uid", label = NULL, con = NULL, asList 
     q <- str_tpl_format(q,list(uid = uid, prop = prop))
   }else{
     labelIn <- label
-    currentLabelConstraints <- get_constraints(con) %>%
+    currentLabelConstraints <- get_constraints(con)
+    if(nrow(currentLabelConstraints) == 0){
+      stop(prop, " needs to be a unique constraint for label: ", label)
+    }
+    currentLabelConstraints <- currentLabelConstraints %>%
       filter(label == labelIn) %>% pull(property_keys)
     if(!prop %in% currentLabelConstraints){
       stop(prop, " needs to be a unique constraint for label: ", label)

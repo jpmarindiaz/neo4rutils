@@ -102,6 +102,12 @@ test_that("nodes funs",{
   create_constraint(label = "Person", "uid", con)
   get_node_count_by_label(con)
 
+  drop_all_constraints(con)
+  expect_error(get_node_by_uid(uid = "p1", prop = "uid", label = "Person", con = con), "uid needs to be a unique constraint for label: Person")
+
+  create_constraint("Movie","uid", con = con)
+  create_constraint("Person","uid", con = con)
+
   n <- get_node_by_uid(uid = "p1", prop = "uid", label = "Person", con = con)
   expect_equal(n$uid, "p1")
   n <- get_node_by_uid(uid = "la-estrategia", label = "Movie", con = con)

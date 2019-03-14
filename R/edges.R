@@ -155,41 +155,7 @@ get_total_edge_count <- function(graph){
 
 
 
-#' @export
-load_edges_data_frame <- function(edges,
-                                  sourceCol = NULL, targetCol = NULL,
-                                  relType = NULL, relTypeCol = NULL,
-                                  sourceProp = NULL, targetProp = NULL,
-                                  sourceLabel = NULL, targetLabel = NULL,
-                                  graph = NULL,createNodes = FALSE){
-  ed <- transpose(edges)
-  f <- function(e){
-    #e <- ed[[1]]
-    props <- e
-    props[sourceCol] <- NULL
-    props[targetCol] <- NULL
-    src <- get_node_by_uid(e[[sourceCol]],prop = sourceProp, label = sourceLabel,
-                           graph = graph)
-    tgt <- get_node_by_uid(e[[targetCol]],prop = targetProp, label = targetLabel,
-                           graph = graph)
-    if(is.null(src) || is.null(tgt))
-      return(paste0("ERROR in src:",e[[sourceCol]], ", tgt: ",e[[targetCol]]))
-    if(!is.null(relTypeCol)){
-      if(!relTypeCol %in% names(e)) stop("RelTypeCol not in node")
-      relType <- e[[relTypeCol]]
-    }
-    props <- props[!is.na(props)]
-    if(is.na(relType))
-      return(paste0("ERROR: REL_TYPE is NA in src:",e[[sourceCol]], ", tgt: ",e[[targetCol]]))
 
-    if(length(props) == 0)
-      props <- NULL
-
-    createRel(src, relType, tgt, props)
-    "OK"
-  }
-  map(ed,f)
-}
 
 #' @export
 get_edge_count <- function(rel_type= NULL, con = con){
@@ -227,4 +193,42 @@ delete_edges <- function(con){
   res <- call_neo4j(q, con)
   get_edge_count(rel_type = NULL, con)
 }
+
+#' #' @export
+#' load_edges_data_frame <- function(edges,
+#'                                   sourceCol = NULL, targetCol = NULL,
+#'                                   relType = NULL, relTypeCol = NULL,
+#'                                   sourceProp = NULL, targetProp = NULL,
+#'                                   sourceLabel = NULL, targetLabel = NULL,
+#'                                   graph = NULL,createNodes = FALSE){
+#'   ed <- transpose(edges)
+#'   f <- function(e){
+#'     #e <- ed[[1]]
+#'     props <- e
+#'     props[sourceCol] <- NULL
+#'     props[targetCol] <- NULL
+#'     src <- get_node_by_uid(e[[sourceCol]],prop = sourceProp, label = sourceLabel,
+#'                            graph = graph)
+#'     tgt <- get_node_by_uid(e[[targetCol]],prop = targetProp, label = targetLabel,
+#'                            graph = graph)
+#'     if(is.null(src) || is.null(tgt))
+#'       return(paste0("ERROR in src:",e[[sourceCol]], ", tgt: ",e[[targetCol]]))
+#'     if(!is.null(relTypeCol)){
+#'       if(!relTypeCol %in% names(e)) stop("RelTypeCol not in node")
+#'       relType <- e[[relTypeCol]]
+#'     }
+#'     props <- props[!is.na(props)]
+#'     if(is.na(relType))
+#'       return(paste0("ERROR: REL_TYPE is NA in src:",e[[sourceCol]], ", tgt: ",e[[targetCol]]))
+#'
+#'     if(length(props) == 0)
+#'       props <- NULL
+#'
+#'     createRel(src, relType, tgt, props)
+#'     "OK"
+#'   }
+#'   map(ed,f)
+#' }
+
+
 

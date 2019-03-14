@@ -16,7 +16,7 @@ test_that("connection",{
 
   create_constraint("Movie","id", con = con)
   create_constraint("Movie","uid", con = con)
-  expect_equal(con$get_constraints() %>% pull(property_keys),c("id","uid"))
+  expect_equal(con$get_constraints() %>% pull(property_keys) %>% sort(),c("id","uid"))
   drop_constraint("Movie","id", con = con)
   expect_equal(con$get_constraints() %>% pull(property_keys),"uid")
 
